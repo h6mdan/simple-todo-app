@@ -93,6 +93,5 @@ export interface UserProfile {
   email: string;
   name?: string;
   avatar_url?: string;
-  isDemo?: boolean;
   team_members?: Collaborator[];
 }

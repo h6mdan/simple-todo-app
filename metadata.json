@@ -1,6 +1,8 @@
 {
-  "name": "Microsoft To Do",
+  "name": "My To Do",
   "description": "A smart, minimalist task manager with My Day, Important, Planned, Assigned to me, list sharing, workspace collaboration, subtasks, and Supabase authentication.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

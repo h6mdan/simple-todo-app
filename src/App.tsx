@@ -35,6 +35,7 @@ import { TaskDetailPane } from './components/TaskDetailPane.tsx';
 import { CalendarView } from './components/CalendarView.tsx';
 import { StickyWallView } from './components/StickyWallView.tsx';
 import { AuthModal } from './components/AuthModal.tsx';
+import { AuthScreen } from './components/AuthScreen.tsx';
 import { ShareListModal } from './components/ShareListModal.tsx';
 import { CreateTaskModal } from './components/CreateTaskModal.tsx';
 
@@ -99,13 +100,38 @@ export default function App() {
     } catch {
       // ignore
     }
-    return {
-      id: 'demo-user',
-      email: 'AyaHamdan7789@gmail.com',
-      name: 'Lino biju',
-      isDemo: true,
-    };
+    return null;
   });
+
+  const handleSignOut = useCallback(async () => {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.error('Error signing out:', err);
+      }
+    }
+    try {
+      localStorage.removeItem('ms_todo_user_profile');
+    } catch {
+      // ignore
+    }
+    setUser(null);
+  }, []);
+
+  const handleUserChange = useCallback((newUser: UserProfile | null) => {
+    setUser(newUser);
+    try {
+      if (newUser) {
+        localStorage.setItem('ms_todo_user_profile', JSON.stringify(newUser));
+      } else {
+        localStorage.removeItem('ms_todo_user_profile');
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // Local storage auto-persistence
   useEffect(() => {
@@ -158,7 +184,7 @@ export default function App() {
 
   // Fetch from Supabase when user logs in
   useEffect(() => {
-    if (!user || user.isDemo) return;
+    if (!user) return;
 
     const loadRemoteData = async () => {
       try {
@@ -308,7 +334,7 @@ export default function App() {
     setTasks((prev) => [newTask, ...prev]);
     setSelectedTaskId(newTask.id);
 
-    if (user && !user.isDemo) {
+    if (user) {
       syncTaskToSupabase(newTask, user.id);
     }
   }, [currentView, selectedCategory, lists, user]);
@@ -331,14 +357,14 @@ export default function App() {
     };
     setTasks((prev) => [newTask, ...prev]);
     setSelectedTaskId(newTask.id);
-    if (user && !user.isDemo) {
+    if (user) {
       syncTaskToSupabase(newTask, user.id);
     }
   }, [lists, user]);
 
   const handleUpdateTask = useCallback((updated: Task) => {
     setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-    if (user && !user.isDemo) {
+    if (user) {
       syncTaskToSupabase(updated, user.id);
     }
   }, [user]);
@@ -348,7 +374,7 @@ export default function App() {
     if (selectedTaskId === taskId) {
       setSelectedTaskId(null);
     }
-    if (user && !user.isDemo) {
+    if (user) {
       deleteTaskFromSupabase(taskId, user.id);
     }
   }, [selectedTaskId, user]);
@@ -373,7 +399,7 @@ export default function App() {
     };
 
     setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
-    if (user && !user.isDemo) {
+    if (user) {
       syncTaskToSupabase(updated, user.id);
     }
   }, [user]);
@@ -386,7 +412,7 @@ export default function App() {
       updated_at: new Date().toISOString(),
     };
     setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
-    if (user && !user.isDemo) {
+    if (user) {
       syncTaskToSupabase(updated, user.id);
     }
   }, [user]);
@@ -398,7 +424,7 @@ export default function App() {
       updated_at: new Date().toISOString(),
     };
     setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
-    if (user && !user.isDemo) {
+    if (user) {
       syncTaskToSupabase(updated, user.id);
     }
   }, [user]);
@@ -425,7 +451,7 @@ export default function App() {
     };
     setLists((prev) => [...prev, newList]);
     setSelectedCategory(newList.id);
-    if (user && !user.isDemo) {
+    if (user) {
       syncListToSupabase(newList, user.id);
     }
   }, [user]);
@@ -435,7 +461,7 @@ export default function App() {
     if (selectedCategory === listId) {
       setSelectedCategory('all');
     }
-    if (user && !user.isDemo) {
+    if (user) {
       deleteListFromSupabase(listId, user.id);
     }
   }, [selectedCategory, user]);
@@ -445,6 +471,19 @@ export default function App() {
       setTags((prev) => [...prev, newTag]);
     }
   }, [tags]);
+
+  // Prompt unauthenticated users to log in to use the app
+  if (!user) {
+    return (
+      <AuthScreen
+        onSuccessLogin={(loggedInUser) => {
+          handleUserChange(loggedInUser);
+        }}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={handleToggleDarkMode}
+      />
+    );
+  }
 
   return (
     <div
@@ -459,6 +498,7 @@ export default function App() {
         onToggleDarkMode={handleToggleDarkMode}
         user={user}
         onOpenAuth={() => setIsAuthModalOpen(true)}
+        onSignOut={handleSignOut}
         onQuickNewTask={() => setIsCreateModalOpen(true)}
         onOpenMobileMenu={() => setIsMobileSidebarOpen(true)}
       />
@@ -542,7 +582,8 @@ export default function App() {
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         user={user}
-        onUserChange={setUser}
+        onUserChange={handleUserChange}
+        onSignOut={handleSignOut}
       />
 
       {/* Share List Modal */}
@@ -584,7 +625,7 @@ export default function App() {
           };
           setTasks((prev) => [newTask, ...prev]);
           setSelectedTaskId(newTask.id);
-          if (user && !user.isDemo) {
+          if (user) {
             syncTaskToSupabase(newTask, user.id);
           }
         }}
